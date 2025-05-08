@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes.js';
 import groupRoutes from './routes/groupRoutes.js';
 import yelpRoutes from './routes/yelpRoutes.js';
+import { redis } from './utils/redisClient.js';
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +35,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/yelp', yelpRoutes);
 
+app.get('/:groupId/recommend', async (req, res) => {
+  const recsJson = await redis.hget('group_recs', req.params.groupId);
+  const recs = recsJson ? JSON.parse(recsJson) : [];
+  res.json({ recommendations: recs });
+});
 // Health check route
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'GrubSync API is running' });
@@ -43,3 +49,11 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+async function addPreferencesToRedis(groupId, cuisines, dietary) {
+  await redis.xadd('preferences', '*',
+    'groupId', groupId,
+    'cuisines', JSON.stringify(cuisines),
+    'dietary', JSON.stringify(dietary),
+  );
+}
