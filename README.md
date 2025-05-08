@@ -45,118 +45,60 @@ Redis instance (local or managed)
 ## Docker Setup (Local Dev)
 Create a docker-compose.yml in the repo root:
 
-yaml
-Copy
-Edit
-version: '3.8'
-services:
-  redis:
-    image: redis:7
-    ports: ['6379:6379']
-
-  dask-scheduler:
-    image: daskdev/dask:latest
-    command: dask-scheduler
-    ports: ['8786:8786','8787:8787']
-
-  dask-worker:
-    image: daskdev/dask:latest
-    command: >
-      dask-worker tcp://dask-scheduler:8786
-      --nthreads 2 --memory-limit 4GB
-    depends_on:
-      - dask-scheduler
-To spin up Redis & Dask locally:
-
-bash
-Copy
-Edit
 docker-compose up -d
 
 ## Getting Started
-1. Clone the Repo
-bash
-Copy
-Edit
-git clone https://github.com/siri1404/GrubSync‑BigData.git
-cd GrubSync‑BigData
-2. Configure Environment
-Copy and edit:
 
-bash
-Copy
-Edit
-cp .env.example .env
-ini
-Copy
-Edit
-# MongoDB
-MONGODB_URI=mongodb+srv://<user>:<pass>@cluster0.mongodb.net/grubsync?retryWrites=true&w=majority
+1. **Clone the Repository**  
+    ```bash
+    git clone https://github.com/siri1404/GrubSync-BigData.git
+    cd GrubSync-BigData
+    ```
 
-# Auth
-JWT_SECRET=your_jwt_secret
+2. **Configure Environment**  
+    Copy and edit the environment file:  
+    ```bash
+    cp .env.example .env
+    ```
+    Update the following variables in the `.env` file:
+    ```env
+    MONGODB_URI=mongodb+srv://<user>:<pass>@cluster0.mongodb.net/grubsync?retryWrites=true&w=majority
+    JWT_SECRET=your_jwt_secret
+    REDIS_URL=redis://localhost:6379
+    DASK_SCHEDULER=tcp://localhost:8786
+    YELP_API_KEY=your_yelp_api_key
+    GOOGLE_API_KEY=your_google_maps_key
 
-# Redis
-REDIS_URL=redis://localhost:6379
+    # Server
+    PORT=3001
 
-# Dask
-DASK_SCHEDULER=tcp://localhost:8786
+    # Batch training output
+    MODEL_OUTPUT=./models
+    ```
 
-# APIs (if still using Yelp/Google in fallback)
-YELP_API_KEY=your_yelp_api_key
-GOOGLE_API_KEY=your_google_maps_key
+3. **Install Dependencies**  
+    Install dependencies for both the backend and frontend:  
+    ```bash
+    npm install
+    ```
+    Install Python dependencies for the pipeline:  
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-# Server
-PORT=3001
+4. **Running Services**  
+    - **Backend API**  
+      Start the backend server:  
+      ```bash
+      cd server
+      npm run dev
+      ```
+      The backend will be available at: [http://localhost:3001](http://localhost:3001)
 
-# Batch training output
-MODEL_OUTPUT=./models
-3. Install Dependencies
-bash
-Copy
-Edit
-# Backend & frontend
-npm install
-
-# Python pipeline
-pip install -r requirements.txt
-🏃 Running Services
-Backend API
-bash
-Copy
-Edit
-cd server
-npm run dev
-# → http://localhost:3001
-Frontend App
-bash
-Copy
-Edit
-cd src
-npm run dev
-# → http://localhost:5173
-
-
-
-This script will:
-
-Consume events from Redis Streams (preferences, location, group_events).
-
-Window them via Streamz, convert to Dask DataFrames.
-
-Call dask_pipeline/utils.rank_restaurants() per group window.
-
-Write top‑K recommendations into Redis hash group_recs.
-
-
-## Environment Variables
-Key	Description
-MONGODB_URI	MongoDB connection string
-JWT_SECRET	JWT signing secret
-REDIS_URL	Redis Streams & Hash storage URL
-DASK_SCHEDULER	Dask scheduler address (e.g. tcp://…)
-YELP_API_KEY	(Optional) Yelp Fusion API key
-GOOGLE_API_KEY	(Optional) Google Maps API key
-PORT	Express server port
-MODEL_OUTPUT	Directory for batch‑trained models
-
+    - **Frontend App**  
+      Start the frontend application:  
+      ```bash
+      cd src
+      npm run dev
+      ```
+      The frontend will be available at: [http://localhost:5173](http://localhost:5173)

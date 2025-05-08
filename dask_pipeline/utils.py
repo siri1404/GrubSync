@@ -7,7 +7,7 @@ from pymongo import MongoClient
 # ——————————————————————————————————————————————————————————————
 # 1) Database connection (reuse for batch & streaming)
 # ——————————————————————————————————————————————————————————————
-MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/grubsync")
+MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client.get_default_database()
 
