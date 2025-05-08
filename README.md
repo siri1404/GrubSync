@@ -30,6 +30,12 @@ ML & Analytics: scikit‑learn, Dask DataFrame
 Orchestration: cron or Airflow/Prefect for nightly jobs
 
 Dev Tools: Docker Compose, ESLint, Prettier
+## Demo Video
+
+Check out the demo video of GrubSync in action:
+
+[![GrubSync Demo](https://img.youtube.com/si/<1dzQD74YuiYsbmZ4>/0.jpg)](https://youtu.be/WWwh1vykWAg?si=1dzQD74YuiYsbmZ4)
+
 
 ## Prerequisites
 Docker & Docker Compose
