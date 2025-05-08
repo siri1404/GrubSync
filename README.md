@@ -62,10 +62,6 @@ docker-compose up -d
     ```
 
 2. **Configure Environment**  
-    Copy and edit the environment file:  
-    ```bash
-    cp .env.example .env
-    ```
     Update the following variables in the `.env` file:
     ```env
     MONGODB_URI=mongodb+srv://<user>:<pass>@cluster0.mongodb.net/grubsync?retryWrites=true&w=majority
