@@ -6,7 +6,6 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes.js';
 import groupRoutes from './routes/groupRoutes.js';
 import yelpRoutes from './routes/yelpRoutes.js';
-import preferenceRoutes from './routes/preferenceRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -34,9 +33,6 @@ app.use(cors({
 app.use('/api/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/yelp', yelpRoutes);
-app.use('/api/groups/:groupId/preferences',
-  preferenceRoutes
-);
 
 // Health check route
 app.get('/api/health', (req, res) => {
