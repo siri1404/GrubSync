@@ -17,7 +17,7 @@ const priceMapping = {
   '$$$$': '1,2,3,4'
 };
 
-// Distance scoring configuration - significantly increased weight for proximity
+// Distance scoring configuration
 const DISTANCE_WEIGHTS = {
   VERY_CLOSE: 60,  // 0-2 miles
   CLOSE: 45,       // 2-5 miles
@@ -141,11 +141,11 @@ function getDistanceScore(distance) {
   return DISTANCE_WEIGHTS.VERY_FAR;
 }
 
-function calculateMatchScore(restaurant, cuisinePrefs, dietaryRestrictions, budget, distance, userCoordinates) {
+function calculateMatchScore(restaurant, cuisinePrefs, dietaryRestrictions, budget, distance) {
   let score = 0;
   const maxScore = 100;
   
-  // Distance is now the MOST important factor - add it first
+  // Distance is now the primary factor
   score += getDistanceScore(distance);
   
   const restaurantCategories = restaurant.categories.map(c => ({
@@ -165,11 +165,11 @@ function calculateMatchScore(restaurant, cuisinePrefs, dietaryRestrictions, budg
   });
   score += Math.min(cuisineScore, 25);
   
-  // Rating - slightly less important than before
+  // Rating score
   const ratingScore = (restaurant.rating / 5) * 10;
   score += ratingScore;
   
-  // Review count - slightly less important than before
+  // Review count score
   const reviewScore = Math.min((restaurant.review_count / 200) * 5, 5);
   score += reviewScore;
   
@@ -187,47 +187,58 @@ function calculateMatchScore(restaurant, cuisinePrefs, dietaryRestrictions, budg
 }
 
 async function searchRestaurantsInZone(zone, params, apiKey) {
-  try {
-    const zoneParams = {
-      ...params,
-      latitude: zone.lat,
-      longitude: zone.lng,
-      location: undefined
-    };
-    
-    // For local searches, we want a smaller radius to get truly nearby results
-    if (!zoneParams.radius || zoneParams.radius > 8000) {
-      zoneParams.radius = 8000; // About 5 miles
+  const maxRetries = 3;
+  const baseDelay = 1000;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const zoneParams = {
+        ...params,
+        latitude: zone.lat,
+        longitude: zone.lng,
+        location: undefined
+      };
+      
+      if (!zoneParams.radius || zoneParams.radius > 8000) {
+        zoneParams.radius = 8000;
+      }
+      
+      const response = await axios.get('https://api.yelp.com/v3/businesses/search', {
+        headers: { 
+          Authorization: `Bearer ${apiKey}`,
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip'
+        },
+        params: zoneParams,
+        timeout: 10000
+      });
+      
+      return response.data.businesses || [];
+    } catch (error) {
+      const isRateLimit = error.response?.status === 429;
+      const isLastAttempt = attempt === maxRetries - 1;
+      
+      if (!isRateLimit || isLastAttempt) {
+        console.error(`Zone search error (${zone.lat},${zone.lng}):`, error.message);
+        return [];
+      }
+      
+      const delay = baseDelay * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-    
-    const response = await axios.get('https://api.yelp.com/v3/businesses/search', {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      params: zoneParams,
-      timeout: 10000
-    });
-    
-    return response.data.businesses || [];
-  } catch (error) {
-    console.error(`Zone search error (${zone.lat},${zone.lng}):`, error.message);
-    return [];
   }
+  
+  return [];
 }
 
 function generateSearchZones(centroid, radius, count) {
-  const zones = [];
-  
-  // Always add the centroid first as it's most important
-  zones.push({ ...centroid });
-  
-  // Generate zones in a tighter pattern around the centroid
+  const zones = [{ ...centroid }];
   const angleStep = (2 * Math.PI) / count;
-  // Use multiple distance rings for better coverage
   const distanceRings = [radius/4, radius/2, radius*0.75];
   
   distanceRings.forEach(offsetDistance => {
     for (let i = 0; i < count; i++) {
       const angle = i * angleStep;
-      // Convert miles to lat/lng approximation - more accurate than previous version
       const latOffset = offsetDistance * Math.cos(angle) / 69;
       const lngOffset = offsetDistance * Math.sin(angle) / (69 * Math.cos(centroid.lat * Math.PI / 180));
       
@@ -286,81 +297,63 @@ router.post('/recommend/:groupId', authenticate, async (req, res) => {
     const averageSpiceLevel = getAverageSpiceLevel(preferences);
     const budgetPref = getCommonBudget(preferences);
     
-    // Don't limit to just top 3 cuisines, but use all requested cuisines
     const cuisines = cuisinePrefs.map(c => c.cuisine);
     const yelpCategories = getAllYelpCategories(cuisines);
     
-    // Create a more focused search pattern with tighter radius
-    const searchZones = generateSearchZones(centroid, 8, 6);
+    const searchZones = generateSearchZones(centroid, 8, 4);
     
-    // Improve search parameters to focus on finding nearby places
     const searchParams = {
-      // For cuisines like "indian", explicitly include this in the term
-      term: cuisines[0], // Focus on the top cuisine
-      categories: yelpCategories.join(','),
+      term: `${cuisines[0]} restaurant`,
+      categories: cuisines[0].toLowerCase() === 'indian' ? 'indian' : yelpCategories.join(','),
       price: priceMapping[budgetPref.budget],
-      radius: 8000, // 5 miles in meters - smaller radius for more local results
-      limit: 20, // Smaller limit per zone but more zones = better coverage
-      sort_by: 'distance', // Always sort by distance
+      radius: 8000,
+      limit: 20,
+      sort_by: 'distance',
       open_now: true
     };
 
-    // If the main cuisine is indian, explicitly ensure we find indian restaurants
-    if (cuisines[0].toLowerCase() === 'indian') {
-      searchParams.categories = 'indian';
-    }
-
-    const searchPromises = searchZones.map(zone => 
-      searchRestaurantsInZone(zone, searchParams, process.env.YELP_API_KEY)
-    );
-    
-    const zoneResults = await Promise.allSettled(searchPromises);
-    
-    const seenBusinessIds = new Set();
     const allRestaurants = [];
+    const seenBusinessIds = new Set();
     
-    zoneResults.forEach(result => {
-      if (result.status === 'fulfilled') {
-        result.value.forEach(business => {
-          if (!seenBusinessIds.has(business.id)) {
-            seenBusinessIds.add(business.id);
-            allRestaurants.push(business);
-          }
-        });
-      }
-    });
+    for (const zone of searchZones) {
+      const results = await searchRestaurantsInZone(zone, searchParams, process.env.YELP_API_KEY);
+      
+      results.forEach(business => {
+        if (!seenBusinessIds.has(business.id)) {
+          seenBusinessIds.add(business.id);
+          allRestaurants.push(business);
+        }
+      });
+      
+      if (allRestaurants.length >= 20) break;
+    }
     
-    // If we didn't find enough restaurants, try a second search with broader parameters
-    if (allRestaurants.length < 5 && cuisines.length > 0) {
+    if (allRestaurants.length < 5) {
       const broadSearchParams = {
-        term: cuisines[0],
-        radius: 16000, // 10 miles
+        term: `${cuisines[0]} restaurant`,
+        radius: 16000,
         limit: 50,
         sort_by: 'distance',
         open_now: true
       };
       
-      const broadSearchPromises = searchZones.slice(0, 3).map(zone => 
-        searchRestaurantsInZone(zone, broadSearchParams, process.env.YELP_API_KEY)
-      );
-      
-      const broadResults = await Promise.allSettled(broadSearchPromises);
-      
-      broadResults.forEach(result => {
-        if (result.status === 'fulfilled') {
-          result.value.forEach(business => {
-            if (!seenBusinessIds.has(business.id)) {
-              seenBusinessIds.add(business.id);
-              allRestaurants.push(business);
-            }
-          });
-        }
-      });
+      for (const zone of searchZones.slice(0, 2)) {
+        const results = await searchRestaurantsInZone(zone, broadSearchParams, process.env.YELP_API_KEY);
+        
+        results.forEach(business => {
+          if (!seenBusinessIds.has(business.id)) {
+            seenBusinessIds.add(business.id);
+            allRestaurants.push(business);
+          }
+        });
+        
+        if (allRestaurants.length >= 10) break;
+      }
     }
     
     let processedRestaurants = allRestaurants
       .map(restaurant => {
-        const distance = restaurant.distance / 1609.34; // convert meters to miles
+        const distance = restaurant.distance / 1609.34;
         return {
           id: restaurant.id,
           name: restaurant.name,
@@ -368,7 +361,7 @@ router.post('/recommend/:groupId', authenticate, async (req, res) => {
           url: restaurant.url,
           rating: restaurant.rating,
           reviewCount: restaurant.review_count,
-          price: restaurant.price || '$$', // Default to $$ if no price available
+          price: restaurant.price || '$$',
           address: restaurant.location.display_address.join(', '),
           categories: restaurant.categories.map(c => c.title),
           phone: restaurant.display_phone,
@@ -379,18 +372,14 @@ router.post('/recommend/:groupId', authenticate, async (req, res) => {
             cuisinePrefs,
             dietaryRestrictions,
             budgetPref,
-            distance,
-            validCoordinates
+            distance
           )
         };
       })
-      // Sort first by distance, then by match score
       .sort((a, b) => {
-        // If restaurants are in similar distance ranges, sort by match score
-        if (Math.abs(a.distance - b.distance) < 3) {
+        if (Math.abs(a.distance - b.distance) < 2) {
           return b.matchScore - a.matchScore;
         }
-        // Otherwise prioritize distance
         return a.distance - b.distance;
       })
       .slice(0, 10);
