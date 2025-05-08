@@ -34,7 +34,7 @@ Dev Tools: Docker Compose, ESLint, Prettier
 
 Check out the demo video of GrubSync in action:
 
-(https://github.com/siri1404/GrubSync/main/Demo.mp4)
+[Watch the Demo](https://github.com/siri1404/GrubSync/blob/main/Demo.mp4)
 
 
 ## Prerequisites
