@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary colors */
+  --color-primary: 255, 126, 29;  /* #FF7E1D */
+  --color-primary-light: 255, 165, 89;
+  --color-primary-dark: 219, 93, 14;
+  
+  /* Secondary colors */
+  --color-secondary: 76, 175, 80;  /* #4CAF50 */
+  --color-secondary-light: 129, 199, 132;
+  --color-secondary-dark: 56, 142, 60;
+  
+  /* Accent colors */
+  --color-accent: 66, 133, 244;  /* #4285F4 */
+  
+  /* Neutral colors */
+  --color-neutral-50: 250, 250, 250;
+  --color-neutral-100: 245, 245, 245;
+  --color-neutral-200: 229, 229, 229;
+  --color-neutral-300: 212, 212, 212;
+  --color-neutral-400: 163, 163, 163;
+  --color-neutral-500: 115, 115, 115;
+  --color-neutral-600: 82, 82, 82;
+  --color-neutral-700: 64, 64, 64;
+  --color-neutral-800: 38, 38, 38;
+  --color-neutral-900: 23, 23, 23;
+  
+  /* Utility colors */
+  --color-success: 33, 150, 83;
+  --color-warning: 255, 152, 0;
+  --color-error: 234, 67, 53;
+  --color-info: 66, 133, 244;
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+/* Custom utility classes */
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50;
+  }
+  
+  .btn-outline {
+    @apply border border-primary text-primary hover:bg-primary hover:text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+  }
+  
+  .input-field {
+    @apply w-full p-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-md overflow-hidden;
+  }
+  
+  .card-body {
+    @apply p-4 sm:p-6;
+  }
+  
+  .page-container {
+    @apply container mx-auto px-4 py-6 max-w-7xl;
+  }
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-800;
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
