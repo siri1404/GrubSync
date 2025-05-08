@@ -34,7 +34,10 @@ Dev Tools: Docker Compose, ESLint, Prettier
 
 Check out the demo video of GrubSync in action:
 
-[![GrubSync Demo](https://img.youtube.com/si/<1dzQD74YuiYsbmZ4>/0.jpg)](https://youtu.be/WWwh1vykWAg?si=1dzQD74YuiYsbmZ4)
+<video width="640" height="360" controls>
+  <source src="Demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 
 ## Prerequisites
